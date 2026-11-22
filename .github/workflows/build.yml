@@ -21,8 +21,17 @@ jobs:
         run: |
           SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           echo "Using SDK_ROOT=$SDK_ROOT"
-          yes | sdkmanager --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
-          sdkmanager --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          SDKMANAGER=$(find "$SDK_ROOT/cmdline-tools" -name "sdkmanager" -type f 2>/dev/null | head -n 1)
+          if [ -z "$SDKMANAGER" ]; then
+            mkdir -p "$SDK_ROOT/cmdline-tools"
+            curl -sSL https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip -o /tmp/cmdtools.zip
+            unzip -q /tmp/cmdtools.zip -d /tmp/cmdtools_extract
+            mv /tmp/cmdtools_extract/cmdline-tools "$SDK_ROOT/cmdline-tools/latest"
+            SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          fi
+          chmod +x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Build Debug APK
         run: gradle assembleDebug --no-daemon
